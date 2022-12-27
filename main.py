@@ -22,8 +22,10 @@ def main():
     points, triangles = read_obj("teapot.obj")
 
     z_order = np.zeros(len(triangles))
+    shade = np.zeros(len(triangles))
 
     camera = np.asarray([13, 0.5, 2, 3.3, 0])
+    light_dir = np.asarray([0, 1, 1])
 
     while running:
 
@@ -37,7 +39,7 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE: running = False
 
         project_points(points, camera)
-        sort_triangles(points, triangles, camera, z_order)
+        sort_triangles(points, triangles, camera, z_order, light_dir,shade)
 
         for index in np.argsort(z_order):
 
@@ -80,7 +82,7 @@ def project_points(points, camera):
 
 
 @njit()
-def sort_triangles(points, triangles, camera, z_order):
+def sort_triangles(points, triangles, camera, z_order, light_dir, shade):
     for i in range(len(triangles)):
         triangle = triangles[i]
 
@@ -96,6 +98,7 @@ def sort_triangles(points, triangles, camera, z_order):
 
         if dot_3d(normal, camera_ray) < 0:
             z_order[i] = -dist_to_cam
+            shade[i] = 0.5 * dot_3d(light_dir, normal) + 0.5
         else:
             z_order[i] = 9999
 
