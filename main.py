@@ -1,5 +1,6 @@
 import pygame as pg
 import numpy as np
+from numba import njit
 
 # author: https://www.youtube.com/watch?v=D96wb46mjIQ
 
@@ -25,8 +26,11 @@ def main():
     camera = np.asarray([13, 0.5, 2, 3.3, 0])
 
     while running:
+
+        elapsed_time = clock.tick() / 1000
+
         surf.fill([50, 127, 200])
-        print(clock.get_fps())
+        print(int(clock.get_fps()))
 
         for event in pg.event.get():
             if event.type == pg.QUIT: running = False
@@ -36,15 +40,20 @@ def main():
         sort_triangles(points, triangles, camera, z_order)
 
         for index in np.argsort(z_order):
+
+            if z_order[index] == 9999: break
+
             triangle = [points[triangles[index][0]][3:], points[triangles[index][1]][3:], points[triangles[index][2]][3:]]
 
             color = np.abs(points[triangles[index][0]][:3])*45 + 25
 
             pg.draw.polygon(surf, color, triangle)
 
-            screen.blit(surf, (0, 0)); pg.display.update()
+        screen.blit(surf, (0, 0)); pg.display.update()
+        pg.display.set_caption(str(round(1/(elapsed_time + 1e-16), 1)) + " " + str(camera))
 
 
+@njit()
 def project_points(points, camera):
 
     for point in points:
@@ -70,14 +79,30 @@ def project_points(points, camera):
         point[4] = SCREEN_H * v_angle / FOV_V + SCREEN_H / 2
 
 
+@njit()
 def sort_triangles(points, triangles, camera, z_order):
     for i in range(len(triangles)):
         triangle = triangles[i]
 
+        vet1 = points[triangle[1]][:3] - points[triangle[0]][:3]
+        vet2 = points[triangle[2]][:3] - points[triangle[0]][:3]
+
+        normal = np.cross(vet1, vet2)
+        normal = normal / np.sqrt(normal[0]**2 + normal[1]**2 + normal[2]**2)
+
         camera_ray = points[triangle[0]][:3] - camera[:3]
         dist_to_cam = np.sqrt(camera_ray[0]**2 + camera_ray[1]**2 + camera_ray[2]**2)
+        camera_ray = camera_ray / dist_to_cam
 
-        z_order[i] = -dist_to_cam
+        if dot_3d(normal, camera_ray) < 0:
+            z_order[i] = -dist_to_cam
+        else:
+            z_order[i] = 9999
+
+
+@njit()
+def dot_3d(arr1, arr2):
+    return arr1[0]*arr2[0] + arr1[1]*arr2[1] + arr1[2]*arr2[2]
 
 
 def read_obj(file_name):
