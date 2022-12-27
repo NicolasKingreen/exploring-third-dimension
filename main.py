@@ -22,16 +22,18 @@ def main():
     points, triangles = read_obj("teapot.obj")
 
     z_order = np.zeros(len(triangles))
-    shade = np.zeros(len(triangles))
 
     camera = np.asarray([13, 0.5, 2, 3.3, 0])
-    light_dir = np.asarray([0, 1, 1])
+    shade = np.zeros(len(triangles))
 
     while running:
+        pg.mouse.set_pos(SCREEN_W/2, SCREEN_H/2)
 
         elapsed_time = clock.tick() / 1000
 
         surf.fill([50, 127, 200])
+        light_dir = np.asarray([np.sin(pg.time.get_ticks()/1000), 1, 1])
+        light_dir = light_dir / np.linalg.norm(light_dir)
         print(int(clock.get_fps()))
 
         for event in pg.event.get():
@@ -53,6 +55,40 @@ def main():
 
         screen.blit(surf, (0, 0)); pg.display.update()
         pg.display.set_caption(str(round(1/(elapsed_time + 1e-16), 1)) + " " + str(camera))
+        movement(camera, elapsed_time)
+
+
+def movement(camera, elapsed_time):
+
+    if pg.mouse.get_focused():
+        p_mouse = pg.mouse.get_pos()
+        camera[3] = (camera[3] + 10*elapsed_time*np.clip((p_mouse[0]-SCREEN_W/2)/SCREEN_W, -0.2, .2))%(2*np.pi)
+        camera[4] = camera[4] + 10 * elapsed_time * np.clip((p_mouse[1]-SCREEN_H/2)/SCREEN_H, -0.2, .2)
+        camera[4] = np.clip(camera[4], -.3, .3)
+
+    pressed_keys = pg.key.get_pressed()
+
+    if pressed_keys[ord('e')]: camera[1] += elapsed_time
+    elif pressed_keys[ord('q')]: camera[1] -= elapsed_time
+
+    if (pressed_keys[ord('w')] or pressed_keys[ord('s')]) and (pressed_keys[ord('a')] or pressed_keys[ord('d')]):
+        elapsed_time *= 0.707
+
+    if pressed_keys[pg.K_UP] or pressed_keys[ord('w')]:
+        camera[0] += elapsed_time * np.cos(camera[3])
+        camera[2] += elapsed_time * np.sin(camera[3])
+
+    elif pressed_keys[pg.K_DOWN] or pressed_keys[ord('s')]:
+        camera[0] -= elapsed_time * np.cos(camera[3])
+        camera[2] -= elapsed_time * np.sin(camera[3])
+
+    if pressed_keys[pg.K_LEFT] or pressed_keys[ord('a')]:
+        camera[0] += elapsed_time * np.sin(camera[3])
+        camera[2] -= elapsed_time * np.cos(camera[3])
+
+    elif pressed_keys[pg.K_RIGHT] or pressed_keys[ord('d')]:
+        camera[0] -= elapsed_time * np.sin(camera[3])
+        camera[2] += elapsed_time * np.cos(camera[3])
 
 
 @njit()
